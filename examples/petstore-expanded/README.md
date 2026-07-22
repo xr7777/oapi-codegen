@@ -77,3 +77,47 @@ cd examples && go run ./petstore-expanded/common/client/ --port 8080
 ```
 
 The client verifies: add pets, find by ID, 404 on missing pet, list/filter by tag, delete, and empty list after deletion.
+
+## Contract Testing with Specmatic
+
+The `stdhttp` variant also has an opt-in [Specmatic](https://specmatic.io/) contract test. It starts the real server and checks its HTTP responses against [petstore-expanded.yaml](petstore-expanded.yaml), rather than testing a mocked handler.
+
+This is useful because compilation and handler unit tests cannot by themselves confirm that a running server returns the status codes, headers, and JSON shapes promised by the OpenAPI document. Contract testing catches that drift at the HTTP boundary. During this integration, it exposed two real mismatches: Fiber v3 returned `201 Created` for `POST /pets` when the contract specifies `200 OK`, and the `stdhttp` store encoded an empty pet list as `null` instead of `[]`.
+
+### Run the contract test
+
+Docker must be running; the test uses the pinned `specmatic/specmatic:2.50.1` image, so no local Specmatic CLI, Java, or Node installation is required.
+
+```sh
+# From the repository root
+make specmatic-test
+```
+
+Or run it directly from the example:
+
+```sh
+cd examples/petstore-expanded/stdhttp
+go test -tags=specmatic -count=1 -v ./...
+```
+
+The test automatically:
+
+- starts the `stdhttp` server on a free port;
+- creates `Spot` with ID `1000` using `POST /pets`, so successful `GET` and `DELETE /pets/1000` scenarios have known state;
+- runs Specmatic in Docker against the live server; and
+- shuts the server down and writes an HTML report to `stdhttp/build/reports/specmatic/test/html/index.html`.
+
+Specmatic verifies status codes, headers, response JSON schemas, valid and invalid parameters, expected `400`/`404` errors, and schema-resiliency cases such as invalid values and types. This makes the contract test a useful CI regression check: an implementation change that returns an undocumented status, changes a response shape, or handles malformed input differently fails before merge.
+
+The contract test is behind the `specmatic` build tag. Normal generation, test, and lint commands do not require Docker or run Specmatic.
+
+### Adapting this to other business logic
+
+The same pattern works for a service with real business logic, a database, or external dependencies:
+
+1. Point `specmatic.yaml` at that service's OpenAPI document.
+2. Start the real service in a test harness, Docker Compose stack, or test environment.
+3. Prepare only the deterministic state required for successful scenarios, using public APIs, fixtures, or migrations.
+4. Run Specmatic against the live base URL in CI.
+
+This keeps the OpenAPI document as the source of truth while testing the actual HTTP boundary, not an in-memory mock.
