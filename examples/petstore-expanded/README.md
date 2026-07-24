@@ -86,7 +86,7 @@ This is useful because compilation and handler unit tests cannot by themselves c
 
 ### Run the contract test
 
-Docker must be running; the test uses the pinned `specmatic/specmatic:2.50.1` image, so no local Specmatic CLI, Java, or Node installation is required.
+Docker must be running; the test uses the pinned `specmatic/specmatic:2.50.1` image.
 
 ```sh
 # From the repository root
@@ -103,11 +103,8 @@ go test -tags=specmatic -count=1 -v ./...
 The test automatically:
 
 - starts the `stdhttp` server on a free port;
-- creates `Spot` with ID `1000` using `POST /pets`, so successful `GET` and `DELETE /pets/1000` scenarios have known state;
 - runs Specmatic in Docker against the live server; and
 - shuts the server down and writes an HTML report to `stdhttp/build/reports/specmatic/test/html/index.html`.
-
-Specmatic verifies status codes, headers, response JSON schemas, valid and invalid parameters, expected `400`/`404` errors, and schema-resiliency cases such as invalid values and types. This makes the contract test a useful CI regression check: an implementation change that returns an undocumented status, changes a response shape, or handles malformed input differently fails before merge.
 
 The contract test is behind the `specmatic` build tag. Normal generation, test, and lint commands do not require Docker or run Specmatic.
 
