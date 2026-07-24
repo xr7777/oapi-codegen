@@ -4,6 +4,7 @@ on:
     paths:
       - '.github/workflows/specmatic-contract-tests.yml'
       - 'Makefile'
+      - 'pkg/codegen/templates/stdhttp/**'
       - 'examples/go.mod'
       - 'examples/go.sum'
       - 'examples/petstore-expanded/README.md'
@@ -16,6 +17,7 @@ on:
     paths:
       - '.github/workflows/specmatic-contract-tests.yml'
       - 'Makefile'
+      - 'pkg/codegen/templates/stdhttp/**'
       - 'examples/go.mod'
       - 'examples/go.sum'
       - 'examples/petstore-expanded/README.md'
@@ -38,7 +40,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: go.mod
+          go-version-file: examples/go.mod
 
       - name: Run Specmatic contract tests
         run: make specmatic-test
