@@ -77,3 +77,44 @@ cd examples && go run ./petstore-expanded/common/client/ --port 8080
 ```
 
 The client verifies: add pets, find by ID, 404 on missing pet, list/filter by tag, delete, and empty list after deletion.
+
+## Contract Testing with Specmatic
+
+The `stdhttp` variant also has an opt-in [Specmatic](https://specmatic.io/) contract test. It starts the real server and checks its HTTP responses against [petstore-expanded.yaml](petstore-expanded.yaml), rather than testing a mocked handler.
+
+This is useful because compilation and handler unit tests cannot by themselves confirm that a running server returns the status codes, headers, and JSON shapes promised by the OpenAPI document. Contract testing catches that drift at the HTTP boundary. During this integration, it exposed two real mismatches: Fiber v3 returned `201 Created` for `POST /pets` when the contract specifies `200 OK`, and the `stdhttp` store encoded an empty pet list as `null` instead of `[]`.
+
+### Run the contract test
+
+Docker must be running; the test uses the pinned `specmatic/specmatic:2.50.1` image.
+
+```sh
+# From the repository root
+make specmatic-test
+```
+
+Or run it directly from the example:
+
+```sh
+cd examples/petstore-expanded/stdhttp
+go test -tags=specmatic -count=1 -v ./...
+```
+
+The test automatically:
+
+- starts the `stdhttp` server on a free port;
+- runs Specmatic in Docker against the live server; and
+- shuts the server down and writes an HTML report to `stdhttp/build/reports/specmatic/test/html/index.html`.
+
+The contract test is behind the `specmatic` build tag. Normal generation, test, and lint commands do not require Docker or run Specmatic.
+
+### Adapting this to other business logic
+
+The same pattern works for a service with real business logic, a database, or external dependencies:
+
+1. Point `specmatic.yaml` at that service's OpenAPI document.
+2. Start the real service in a test harness, Docker Compose stack, or test environment.
+3. Prepare only the deterministic state required for successful scenarios, using public APIs, fixtures, or migrations.
+4. Run Specmatic against the live base URL in CI.
+
+This keeps the OpenAPI document as the source of truth while testing the actual HTTP boundary, not an in-memory mock.
