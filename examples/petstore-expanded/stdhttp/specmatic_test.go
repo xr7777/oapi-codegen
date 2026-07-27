@@ -18,7 +18,7 @@ import (
 	"github.com/oapi-codegen/oapi-codegen/v2/examples/petstore-expanded/stdhttp/server"
 )
 
-const specmaticImage = "specmatic/specmatic:2.50.1"
+const specmaticImage = "specmatic/specmatic:latest"
 
 func TestSpecmaticContract(t *testing.T) {
 	docker, err := exec.LookPath("docker")

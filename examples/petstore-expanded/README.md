@@ -70,41 +70,48 @@ Start a server in one terminal, then point the client at it from another:
 
 ```sh
 # Terminal 1: start any server variant
-cd examples/petstore-expanded/chi && go run . --port 8080
+cd examples/petstore-expanded/chi
+go run . --port 8080
 
 # Terminal 2: run the test client against it
-cd examples && go run ./petstore-expanded/common/client/ --port 8080
+cd examples
+go run ./petstore-expanded/common/client/ --port 8080
 ```
 
 The client verifies: add pets, find by ID, 404 on missing pet, list/filter by tag, delete, and empty list after deletion.
 
 ## Contract Testing with Specmatic
 
-The `stdhttp` variant also has an opt-in [Specmatic](https://specmatic.io/) contract test. It starts the real server and checks its HTTP responses against [petstore-expanded.yaml](petstore-expanded.yaml), rather than testing a mocked handler.
+The [Specmatic](https://specmatic.io/) CLI checks a running server against [petstore-expanded.yaml](petstore-expanded.yaml), rather than testing a mocked handler.
 
 This is useful because compilation and handler unit tests cannot by themselves confirm that a running server returns the status codes, headers, and JSON shapes promised by the OpenAPI document. Contract testing catches that drift at the HTTP boundary. During this integration, it exposed two real mismatches: Fiber v3 returned `201 Created` for `POST /pets` when the contract specifies `200 OK`, and the `stdhttp` store encoded an empty pet list as `null` instead of `[]`.
 
-### Run the contract test
+### Test an already-running server
 
-Docker must be running; the test uses the pinned `specmatic/specmatic:2.50.1` image.
+Docker must be running; the CLI uses the `specmatic/specmatic:latest` image. Keep the `stdhttp` server and contract test in separate terminals:
+
+```sh
+# Terminal 1: start the stdhttp server
+cd examples/petstore-expanded/stdhttp
+go run . --port 8080
+
+# Terminal 2: run Specmatic against it
+cd examples/petstore-expanded/stdhttp
+go run ./cmd/specmatic --port 8080
+```
+
+The CLI uses the shared Petstore contract and leaves the server running after the tests finish.
+
+### Optional: self-contained `stdhttp` contract test
+
+The existing Makefile command remains available when you want the test harness to start and stop the `stdhttp` server for you:
 
 ```sh
 # From the repository root
 make specmatic-test
 ```
 
-Or run it directly from the example:
-
-```sh
-cd examples/petstore-expanded/stdhttp
-go test -tags=specmatic -count=1 -v ./...
-```
-
-The test automatically:
-
-- starts the `stdhttp` server on a free port;
-- runs Specmatic in Docker against the live server; and
-- shuts the server down and writes an HTML report to `stdhttp/build/reports/specmatic/test/html/index.html`.
+It writes an HTML report to `stdhttp/build/reports/specmatic/test/html/index.html`.
 
 The contract test is behind the `specmatic` build tag. Normal generation, test, and lint commands do not require Docker or run Specmatic.
 
