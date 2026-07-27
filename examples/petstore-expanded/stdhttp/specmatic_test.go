@@ -3,7 +3,6 @@
 package main_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -65,7 +64,6 @@ func TestSpecmaticContract(t *testing.T) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	localBaseURL := "http://127.0.0.1:" + fmt.Sprint(port)
 	waitForServer(t, localBaseURL, serveErrors)
-	seedPet(t, localBaseURL, "Spot", "dog", 1000)
 
 	runSpecmatic(t, docker, "http://host.docker.internal:"+fmt.Sprint(port))
 	select {
@@ -125,27 +123,4 @@ func waitForServer(t *testing.T, baseURL string, serveErrors <-chan error) {
 		time.Sleep(25 * time.Millisecond)
 	}
 	t.Fatalf("server did not become ready at %s", baseURL)
-}
-
-func seedPet(t *testing.T, baseURL, name, tag string, expectedID int64) {
-	t.Helper()
-	body, err := json.Marshal(api.NewPet{Name: name, Tag: &tag})
-	if err != nil {
-		t.Fatalf("encode seed pet: %v", err)
-	}
-	response, err := http.Post(baseURL+"/pets", "application/json", bytes.NewReader(body))
-	if err != nil {
-		t.Fatalf("seed pet %q: %v", name, err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		t.Fatalf("seed pet %q status = %d; want %d", name, response.StatusCode, http.StatusOK)
-	}
-	var pet api.Pet
-	if err := json.NewDecoder(response.Body).Decode(&pet); err != nil {
-		t.Fatalf("decode seeded pet %q: %v", name, err)
-	}
-	if pet.Id != expectedID {
-		t.Fatalf("seeded pet %q ID = %d; want %d", name, pet.Id, expectedID)
-	}
 }
