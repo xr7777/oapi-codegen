@@ -32,6 +32,7 @@ func main() {
 		"--volume", exampleDirectory+":/workspace",
 		"--workdir", "/workspace/stdhttp",
 		"--env", "PETSTORE_BASE_URL=http://host.docker.internal:"+*port,
+		"--env", "PETSTORE_SWAGGER_URL=http://host.docker.internal:"+*port+"/openapi.json",
 		specmaticImage,
 		"test", "--config", "specmatic.yaml",
 	)

@@ -45,5 +45,14 @@ func NewServer() (*http.Server, error) {
 		ErrorHandler: errorHandler,
 	})(r)
 
-	return &http.Server{Handler: h}, nil
+	// The embedded contract is served outside the validator because it is not a
+	// Petstore operation. Specmatic uses it to inspect the running service.
+	handler := http.NewServeMux()
+	handler.HandleFunc("/openapi.json", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(swagger)
+	})
+	handler.Handle("/", h)
+
+	return &http.Server{Handler: handler}, nil
 }
